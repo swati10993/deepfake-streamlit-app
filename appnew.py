@@ -1,38 +1,51 @@
 import streamlit as st
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.image import img_to_array
-from tensorflow.keras.applications.xception import preprocess_input
 import numpy as np
+import cv2
+from tensorflow.keras.models import load_model
+import gdown
+import os
 from PIL import Image
 
+# ---------------------------
+# DOWNLOAD MODEL FROM GOOGLE DRIVE
+# ---------------------------
+file_id = "1zIUsFH_gUyfjL_aDUFqEchRkj562OsI_"
+output = "deepfake_model.h5"
+
+if not os.path.exists(output):
+    with st.spinner("Downloading model... Please wait."):
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, output, quiet=False)
+
 # Load model
-model = load_model("xception_epoch_01_manual.h5")
-IMAGE_SIZE = (299, 299)  # Xception input size
+model = load_model(output)
 
-st.set_page_config(page_title="Deepfake Face Detector")
-st.title("🧠 Deepfake Face Detection")
-st.write("Upload a face image to detect whether it's **Real** or a **Deepfake**.")
+# ---------------------------
+# STREAMLIT UI
+# ---------------------------
+st.title("🔍 Deepfake Detection App")
+st.write("Upload an image to check if it's **Real** or **Fake**.")
 
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
+if uploaded_file:
+    image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Preprocess
-    img = image.resize(IMAGE_SIZE)
-    img_array = img_to_array(img)
-    img_array = preprocess_input(img_array)
-    img_array = np.expand_dims(img_array, axis=0)
+    # Convert image to numpy
+    img = np.array(image)
+    img = cv2.resize(img, (224, 224))
+    img = img / 255.0
+    img = np.expand_dims(img, axis=0)
 
-    # Predict
-    prediction = model.predict(img_array)[0][0]
+    # Prediction
+    pred = model.predict(img)[0][0]
 
-    # Adjusted for {'fake': 0, 'real': 1}
-    label = "🔴 Deepfake" if prediction < 0.5 else "🟢 Real"
-    confidence = 1 - prediction if prediction < 0.5 else prediction
-
-    st.markdown("---")
-    st.markdown(f"### 🧾 Prediction: **{label}**")
-    st.markdown(f"📊 Confidence Score: **{confidence:.2f}**")
+    if pred > 0.5:
+        st.error("🚨 Fake Face Detected!")
+        st.write(f"Confidence: {pred:.2f}")
+    else:
+        st.success("✅ Real Face Detected")
+        st.write(f"Confidence: {1 - pred:.2f}")
+    
 
