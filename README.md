@@ -24,3 +24,6 @@ The Xception model is used for classification.
 1. Clone the repository:
 ```bash
 git clone https://github.com/swati10993/deepfake-streamlit-app.git
+
+## Live Demo
+https://deepfake-app-app-brnezubmad7aanduqucemb.streamlit.app/
